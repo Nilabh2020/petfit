@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetFit Collar Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #3F51B5;
+            --secondary-color: #5C6BC0;
+            --accent-color: #FF9800;
+            --dark-color: #333;
+            --light-color: #f4f4f4;
+            --danger-color: #f44336;
+            --success-color: #4CAF50;
+            --heart-color: #E91E63;
+            --temp-color: #FF5722;
+            --ultrasonic-color: #009688;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            color: var(--dark-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container {
+            margin-right: 20px;
+            width: 80px;
+            height: 80px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .logo {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .header-text {
+            flex-grow: 1;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .connection-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+            margin-right: 10px;
+        }
+
+        .status-indicator.connected {
+            background-color: var(--success-color);
+        }
+
+        .connect-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .connect-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .connect-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .sensor-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .sensor-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 15px;
+            height: 100%;
+        }
+
+        .sensor-card.heart::after {
+            background-color: var(--heart-color);
+        }
+
+        .sensor-card.temperature::after {
+            background-color: var(--temp-color);
+        }
+
+        .sensor-card.ultrasonic-left::after, .sensor-card.ultrasonic-right::after {
+            background-color: var(--ultrasonic-color);
+        }
+
+        .sensor-card h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .sensor-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .sensor-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--dark-color);
+            text-align: center;
+        }
+
+        .sensor-unit {
+            color: #777;
+            font-size: 16px;
+        }
+
+        .chart-container {
+            height: 150px;
+            margin-top: 15px;
+        }
+
+        .gauge {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            margin-bottom: 20px;
+        }
+
+        .gauge-body {
+            position: relative;
+            height: 0;
+            padding-bottom: 50%;
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: inherit;
+            height: 100%;
+            transform-origin: center bottom;
+            transition: transform 0.5s ease-out;
+        }
+
+        .gauge-cover {
+            width: 75%;
+            height: 150%;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logs {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 150px;
+            overflow-y: auto;
+        }
+
+        #log-content {
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .heart-rate-icon {
+            display: inline-block;
+            animation: pulse 1s infinite;
+            color: var(--heart-color);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .line-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke-width: 3;
+        }
+
+        .chart-line.heart {
+            stroke: var(--heart-color);
+        }
+
+        .chart-line.temperature {
+            stroke: var(--temp-color);
+        }
+
+        .chart-line.ultrasonic {
+            stroke: var(--ultrasonic-color);
+        }
+
+        .chart-axis {
+            stroke: #ddd;
+        }
+
+        .chart-point {
+            r: 4;
+        }
+
+        .chart-point.heart {
+            fill: var(--heart-color);
+        }
+
+        .chart-point.temperature {
+            fill: var(--temp-color);
+        }
+
+        .chart-point.ultrasonic {
+            fill: var(--ultrasonic-color);
+        }
+
+        .clear-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .clear-btn:hover {
+            background-color: #e08600;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #777;
+        }
+
+        .paw-icon {
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Pet status indicator */
+        .pet-status {
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .pet-status-indicator {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .pet-status-message {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <!-- Replace with your logo -->
+                <img src="WhatsApp Image 2025-04-08 at 20.01.02_208edbfd.jpg" alt="PetFit Collar Logo" class="logo" id="logo-img">
+            </div>
+            <div class="header-text">
+                <h1>PetFit Collar <span class="paw-icon">🐾</span></h1>
+                <p>Smart monitoring for your pet's health and activity</p>
+                <div class="connection-status">
+                    <div>
+                        <span class="status-indicator" id="status-indicator"></span>
+                        <span id="connection-text">Disconnected</span>
+                    </div>
+                    <div>
+                        <button class="connect-btn" id="connect-btn">Connect Bluetooth</button>
+                        <button class="clear-btn" id="clear-btn">Clear Data</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="pet-status">
+            <h3>Pet Status</h3>
+            <div class="pet-status-indicator" id="pet-status-indicator">Normal</div>
+            <div class="pet-status-message" id="pet-status-message">All vitals are within normal ranges</div>
+        </div>
+
+        <div class="dashboard" id="dashboard">
+            <!-- Heart Rate Card -->
+            <div class="sensor-card heart">
+                <h3><span class="sensor-icon heart-rate-icon">❤️</span> Heart Rate</h3>
+                <div class="sensor-value" id="heart-rate-value">-- <span class="sensor-unit">BPM</span></div>
+                <div class="chart-container">
+                    <svg class="line-chart" id="heart-rate-chart">
+                        <!-- Chart will be rendered here -->
+                    </svg>
+                </div>
+                <div class="stats-row">
+                    <span>Min: <span id="heart-rate-min">--</span> BPM</span>
+                    <span>Max: <span id="heart-rate-max">--</span> BPM</span>
+                </div>
+            </div>
+
+            <!-- Temperature Card -->
+            <div class="sensor-card temperature">
+                <h3><span class="sensor-icon">🌡️</span> Temperature</h3>
+                <div class="sensor-value" id="temperature-value">-- <span class="sensor-unit">°C</span></div>
+                <div class="chart-container">
+                    <svg class="line-chart" id="temperature-chart">
+                        <!-- Chart will be rendered here -->
+                    </svg>
+                </div>
+                <div class="stats-row">
+                    <span>Min: <span id="temperature-min">--</span> °C</span>
+                    <span>Max: <span id="temperature-max">--</span> °C</span>
+                </div>
+            </div>
+
+            <!-- Left Ultrasonic Card -->
+            <div class="sensor-card ultrasonic-left">
+                <h3><span class="sensor-icon">👈</span> Left Distance</h3>
+                <div class="sensor-value" id="left-ultrasonic-value">-- <span class="sensor-unit">cm</span></div>
+                <div class="gauge">
+                    <div class="gauge-body">
+                        <div class="gauge-fill" id="left-ultrasonic-gauge" style="background-color: var(--ultrasonic-color);"></div>
+                        <div class="gauge-cover" id="left-ultrasonic-gauge-value">--</div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <span>Min: <span id="left-ultrasonic-min">--</span> cm</span>
+                    <span>Max: <span id="left-ultrasonic-max">--</span> cm</span>
+                </div>
+            </div>
+
+            <!-- Right Ultrasonic Card -->
+            <div class="sensor-card ultrasonic-right">
+                <h3><span class="sensor-icon">👉</span> Right Distance</h3>
+                <div class="sensor-value" id="right-ultrasonic-value">-- <span class="sensor-unit">cm</span></div>
+                <div class="gauge">
+                    <div class="gauge-body">
+                        <div class="gauge-fill" id="right-ultrasonic-gauge" style="background-color: var(--ultrasonic-color);"></div>
+                        <div class="gauge-cover" id="right-ultrasonic-gauge-value">--</div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <span>Min: <span id="right-ultrasonic-min">--</span> cm</span>
+                    <span>Max: <span id="right-ultrasonic-max">--</span> cm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs">
+            <h3>Activity Log</h3>
+            <div id="log-content"></div>
+        </div>
+
+        <footer>
+            <p>PetFit Collar Dashboard | Smart Pet Monitoring System</p>
+        </footer>
+    </div>
+
+    <script>
+        // Configuration and Constants
+        const MAX_DATA_POINTS = 30;
+
+        // Sensor configurations with realistic ranges for India
+        const SENSOR_CONFIG = {
+            heart_rate: {
+                min: 70,
+                max: 120,
+                normal_min: 70,
+                normal_max: 120,
+                unit: 'BPM',
+                simulateValue: () => Math.floor(95 + (Math.random() * 30 - 15)), // 80-110 BPM is normal for dogs
+                formatValue: (val) => Math.round(val)
+            },
+            temperature: {
+                min: 36,
+                max: 40,
+                normal_min: 38,
+                normal_max: 39.2,
+                unit: '°C',
+                simulateValue: () => 38.5 + (Math.random() * 1 - 0.5), // Normal dog temp is 38.3-39.2°C
+                formatValue: (val) => val.toFixed(1)
+            },
+            left_ultrasonic: {
+                min: 5,
+                max: 200,
+                normal_min: 30,
+                normal_max: 150,
+                unit: 'cm',
+                simulateValue: () => Math.floor(50 + Math.random() * 100), // Random distance 50-150cm
+                formatValue: (val) => Math.round(val)
+            },
+            right_ultrasonic: {
+                min: 5,
+                max: 200,
+                normal_min: 30,
+                normal_max: 150,
+                unit: 'cm',
+                simulateValue: () => Math.floor(50 + Math.random() * 100), // Random distance 50-150cm
+                formatValue: (val) => Math.round(val)
+            }
+        };
+
+        // App state
+        const state = {
+            connected: false,
+            bluetoothDevice: null,
+            characteristic: null,
+            sensorData: {
+                heart_rate: {
+                    current: null,
+                    history: [],
+                    min: null,
+                    max: null
+                },
+                temperature: {
+                    current: null,
+                    history: [],
+                    min: null,
+                    max: null
+                },
+                left_ultrasonic: {
+                    current: null,
+                    history: [],
+                    min: null,
+                    max: null
+                },
+                right_ultrasonic: {
+                    current: null,
+                    history: [],
+                    min: null,
+                    max: null
+                }
+            }
+        };
+
+        // DOM Elements
+        const connectBtn = document.getElementById('connect-btn');
+        const statusIndicator = document.getElementById('status-indicator');
+        const connectionText = document.getElementById('connection-text');
+        const logContent = document.getElementById('log-content');
+        const clearBtn = document.getElementById('clear-btn');
+        const petStatusIndicator = document.getElementById('pet-status-indicator');
+        const petStatusMessage = document.getElementById('pet-status-message');
+        const logoImg = document.getElementById('logo-img');
+
+        // Setup chart elements
+        const heartRateChart = document.getElementById('heart-rate-chart');
+        const temperatureChart = document.getElementById('temperature-chart');
+        const leftUltrasonicGauge = document.getElementById('left-ultrasonic-gauge');
+        const rightUltrasonicGauge = document.getElementById('right-ultrasonic-gauge');
+
+        // Check if Web Bluetooth is supported
+        if (!navigator.bluetooth) {
+            connectBtn.disabled = true;
+            logMessage('Error: Web Bluetooth API is not supported in your browser');
+            connectionText.textContent = 'Bluetooth not supported';
+        }
+
+        // Event listeners
+        connectBtn.addEventListener('click', connectBluetooth);
+        clearBtn.addEventListener('click', clearData);
+
+        // Allow logo upload
+        logoImg.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        logoImg.src = event.target.result;
+                        logMessage('Custom logo uploaded');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            fileInput.click();
+        });
+
+        // Connect to Arduino via Bluetooth
+        async function connectBluetooth() {
+            if (state.connected) {
+                disconnectBluetooth();
+                return;
+            }
+
+            try {
+                logMessage('Requesting Bluetooth device...');
+
+                // Request the Bluetooth device
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                });
+
+                state.bluetoothDevice = device;
+
+                logMessage(`Device selected: ${device.name || 'Unknown device'}`);
+                connectionText.textContent = 'Connecting...';
+
+                // Connect to the device
+                const server = await device.gatt.connect();
+                logMessage('Connected to GATT server');
+
+                // Get the service (common service UUID for HC-05/HM-10)
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                logMessage('Service found');
+
+                // Get the characteristic for serial data
+                const characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+                state.characteristic = characteristic;
+                logMessage('Characteristic found');
+
+                // Start notifications to receive data
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleData);
+
+                // Update connection UI
+                state.connected = true;
+                statusIndicator.classList.add('connected');
+                connectionText.textContent = 'Connected';
+                connectBtn.textContent = 'Disconnect';
+
+                logMessage('Ready to receive data');
+
+                // Setup disconnect handler
+                device.addEventListener('gattserverdisconnected', handleDisconnection);
+
+                // Start simulating data since the real sensors may not work
+                startSimulation();
+            } catch (error) {
+                logMessage(`Error: ${error}`);
+                handleDisconnection();
+            }
+        }
+
+        // Handle disconnection
+        function disconnectBluetooth() {
+            if (state.bluetoothDevice && state.bluetoothDevice.gatt.connected) {
+                state.bluetoothDevice.gatt.disconnect();
+            } else {
+                handleDisconnection();
+            }
+        }
+
+        function handleDisconnection() {
+            state.connected = false;
+            state.characteristic = null;
+            statusIndicator.classList.remove('connected');
+            connectionText.textContent = 'Disconnected';
+            connectBtn.textContent = 'Connect Bluetooth';
+            logMessage('Disconnected from device');
+
+            // Stop simulation when disconnected
+            stopSimulation();
+        }
+
+        // Simulation variables
+        let simulationInterval = null;
+
+        // Start simulating sensor data
+        function startSimulation() {
+            if (simulationInterval) return;
+
+            simulationInterval = setInterval(() => {
+                // Simulate data for all sensors
+                const data = {
+                    heart_rate: SENSOR_CONFIG.heart_rate.simulateValue(),
+                    temperature: SENSOR_CONFIG.temperature.simulateValue(),
+                    left_ultrasonic: SENSOR_CONFIG.left_ultrasonic.simulateValue(),
+                    right_ultrasonic: SENSOR_CONFIG.right_ultrasonic.simulateValue()
+                };
+
+                // Update with simulated data
+                updateSensorData(data);
+
+            }, 1000); // Update every second
+
+            logMessage('Simulating sensor data (since real sensors are not fully functional)');
+        }
+
+        // Stop simulation
+        function stopSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        }
+
+        // Handle data from Bluetooth (or simulation)
+        function handleData(event) {
+            if (!event.target.value) return;
+
+            const decoder = new TextDecoder();
+            const value = decoder.decode(event.target.value);
+            logMessage(`Raw data received: ${value.trim()}`);
+
+            try {
+                // Try to parse as JSON (assuming Arduino sends JSON formatted data)
+                if (value.includes('{') && value.includes('}')) {
+                    const jsonStr = value.substring(value.indexOf('{'), value.lastIndexOf('}') + 1);
+                    const data = JSON.parse(jsonStr);
+                    updateSensorData(data);
+                } else {
+                    // If not JSON, try to parse as comma-separated values
+                    const parts = value.split(',');
+                    const data = {};
+
+                    parts.forEach(part => {
+                        // Try to identify sensor data based on keywords
+                        if (part.toLowerCase().includes('heart')) {
+                            const match = part.match(/\d+(\.\d+)?/);
+                            if (match) data.heart_rate = parseFloat(match[0]);
+                        } else if (part.toLowerCase().includes('temp')) {
+                            const match = part.match(/\d+(\.\d+)?/);
+                            if (match) data.temperature = parseFloat(match[0]);
+                        } else if (part.toLowerCase().includes('left')) {
+                            const match = part.match(/\d+(\.\d+)?/);
+                            if (match) data.left_ultrasonic = parseFloat(match[0]);
+                        } else if (part.toLowerCase().includes('right')) {
+                            const match = part.match(/\d+(\.\d+)?/);
+                            if (match) data.right_ultrasonic = parseFloat(match[0]);
+                        }
+                    });
+
+                    if (Object.keys(data).length > 0) {
+                        updateSensorData(data);
+                    }
+                }
+            } catch (error) {
+                logMessage(`Error parsing data: ${error.message}`);
+            }
+        }
+
+        // Update sensor data with new values
+        function updateSensorData(data) {
+            for (const [key, value] of Object.entries(data)) {
+                if (state.sensorData[key]) {
+                    // Update current value
+                    state.sensorData[key].current = value;
+
+                    // Update min/max
+                    if (state.sensorData[key].min === null || value < state.sensorData[key].min) {
+                        state.sensorData[key].min = value;
+                    }
+                    if (state.sensorData[key].max === null || value > state.sensorData[key].max) {
+                        state.sensorData[key].max = value;
+                    }
+
+                    // Add to history
+                    state.sensorData[key].history.push(value);
+                    if (state.sensorData[key].history.length > MAX_DATA_POINTS) {
+                        state.sensorData[key].history.shift();
+                    }
+
+                    // Update display
+                    updateSensorDisplay(key);
+                }
+            }
+
+            // Update pet status based on all sensor data
+            updatePetStatus();
+        }
+
+        // Update the visual display for a specific sensor
+        function updateSensorDisplay(sensorId) {
+            const sensorData = state.sensorData[sensorId];
+            const config = SENSOR_CONFIG[sensorId];
+
+            if (!sensorData || !config) return;
+
+            // Format the displayed value
+            const displayValue = config.formatValue(sensorData.current);
+
+            switch(sensorId) {
+                case 'heart_rate':
+                    // Update value display
+                    document.getElementById('heart-rate-value').innerHTML =
+                        `${displayValue} <span class="sensor-unit">${config.unit}</span>`;
+
+                    // Update min/max
+                    document.getElementById('heart-rate-min').textContent =
+                        config.formatValue(sensorData.min);
+                    document.getElementById('heart-rate-max').textContent =
+                        config.formatValue(sensorData.max);
+
+                    // Update chart
+                    updateLineChart(heartRateChart, sensorData.history, 'heart',
+                                  config.min, config.max);
+                    break;
+
+                case 'temperature':
+                    // Update value display
+                    document.getElementById('temperature-value').innerHTML =
+                        `${displayValue} <span class="sensor-unit">${config.unit}</span>`;
+
+                    // Update min/max
+                    document.getElementById('temperature-min').textContent =
+                        config.formatValue(sensorData.min);
+                    document.getElementById('temperature-max').textContent =
+                        config.formatValue(sensorData.max);
+
+                    // Update chart
+                    updateLineChart(temperatureChart, sensorData.history, 'temperature',
+                                  config.min, config.max);
+                    break;
+
+                case 'left_ultrasonic':
+                    // Update value display
+                    document.getElementById('left-ultrasonic-value').innerHTML =
+                        `${displayValue} <span class="sensor-unit">${config.unit}</span>`;
+
+                    // Update min/max
+                    document.getElementById('left-ultrasonic-min').textContent =
+                        config.formatValue(sensorData.min);
+                    document.getElementById('left-ultrasonic-max').textContent =
+                        config.formatValue(sensorData.max);
+
+                    // Update gauge
+                    updateGauge(leftUltrasonicGauge,
+                              document.getElementById('left-ultrasonic-gauge-value'),
+                              sensorData.current, config.min, config.max);
+                    break;
+
+                case 'right_ultrasonic':
+                    // Update value display
+                    document.getElementById('right-ultrasonic-value').innerHTML =
+                        `${displayValue} <span class="sensor-unit">${config.unit}</span>`;
+
+                    // Update min/max
+                    document.getElementById('right-ultrasonic-min').textContent =
+                        config.formatValue(sensorData.min);
+                    document.getElementById('right-ultrasonic-max').textContent =
+                        config.formatValue(sensorData.max);
+
+                    // Update gauge
+                    updateGauge(rightUltrasonicGauge,
+                              document.getElementById('right-ultrasonic-gauge-value'),
+                              sensorData.current, config.min, config.max);
+                    break;
+            }
+        }
+
+        // Update line chart visualization
+        function updateLineChart(chartElement, data, className, min, max) {
+            if (!data.length) return;
+
+            // Clear previous chart
+            chartElement.innerHTML = '';
+
+            const width = chartElement.clientWidth;
+            const height = chartElement.clientHeight;
+            const padding = 20;
+
+            // Calculate scale factors
+            const xScale = (width - 2 * padding) / (MAX_DATA_POINTS - 1);
+            const yScale = (height - 2 * padding) / (max - min);
+
+            // Create path for the line
+            let path = `M ${padding} ${height - padding - (data[0] - min) * yScale}`;
+
+            // Add points to the path
+            for (let i = 1; i < data.length; i++) {
+                const x = padding + i * xScale;
+                const y = height - padding - (data[i] - min) * yScale;
+                path += ` L ${x} ${y}`;
+            }
+
+            // Create the line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            line.setAttribute('d', path);
+            line.setAttribute('class', `chart-line ${className}`);
+            chartElement.appendChild(line);
+
+            // Add dots for each data point
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + i * xScale;
+                const y = height - padding - (data[i] - min) * yScale;
+
+                const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                point.setAttribute('cx', x);
+                point.setAttribute('cy', y);
+                point.setAttribute('class', `chart-point ${className}`);
+                chartElement.appendChild(point);
+            }
+
+            // Add horizontal axis
+            const hAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            hAxis.setAttribute('x1', padding);
+            hAxis.setAttribute('y1', height - padding);
+            hAxis.setAttribute('x2', width - padding);
+            hAxis.setAttribute('y2', height - padding);
+            hAxis.setAttribute('class', 'chart-axis');
+            hAxis.setAttribute('stroke', '#ddd');
+            chartElement.appendChild(hAxis);
+
+            // Add vertical axis
+            const vAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            vAxis.setAttribute('x1', padding);
+            vAxis.setAttribute('y1', padding);
+            vAxis.setAttribute('x2', padding);
+            vAxis.setAttribute('y2', height - padding);
+            vAxis.setAttribute('class', 'chart-axis');
+            vAxis.setAttribute('stroke', '#ddd');
+            chartElement.appendChild(vAxis);
+        }
+
+        // Update gauge visualization
+        function updateGauge(gaugeElement, valueElement, value, min, max) {
+            // Calculate percentage fill
+            const percent = Math.min(Math.max((value - min) / (max - min), 0), 1);
+            const rotation = percent * 180; // 0% = 0deg, 100% = 180deg
+
+            // Update gauge fill
+            gaugeElement.style.transform = `rotate(${rotation}deg)`;
+
+            // Update value text
+            valueElement.textContent = Math.round(value);
+        }
+
+        // Update overall pet status based on all sensors
+        function updatePetStatus() {
+            const hr = state.sensorData.heart_rate.current;
+            const temp = state.sensorData.temperature.current;
+            const leftDist = state.sensorData.left_ultrasonic.current;
+            const rightDist = state.sensorData.right_ultrasonic.current;
+
+            let status = 'Normal';
+            let message = 'All vitals are within normal ranges';
+
+            // Check heart rate
+            if (hr < SENSOR_CONFIG.heart_rate.normal_min) {
+                status = 'Warning';
+                message = 'Heart rate is below normal range';
+            } else if (hr > SENSOR_CONFIG.heart_rate.normal_max) {
+                status = 'Warning';
+                message = 'Heart rate is elevated';
+            }
+
+            // Check temperature
+            if (temp < SENSOR_CONFIG.temperature.normal_min) {
+                status = 'Warning';
+                message = 'Body temperature is below normal range';
+            } else if (temp > SENSOR_CONFIG.temperature.normal_max) {
+                status = 'Warning';
+                message = 'Body temperature is elevated';
+            }
+
+            // Check for potential movement pattern
+            if (leftDist < 20 && rightDist < 20) {
+                status = 'Alert';
+                message = 'Pet may be in a confined space';
+            } else if (Math.abs(leftDist - rightDist) > 100) {
+                status = 'Interesting';
+                message = 'Pet appears to be favoring one side';
+            }
+
+            // Update status display
+            petStatusIndicator.textContent = status;
+            petStatusMessage.textContent = message;
+
+            // Change color based on status
+            if (status === 'Warning' || status === 'Alert') {
+                petStatusIndicator.style.color = 'var(--danger-color)';
+            } else if (status === 'Interesting') {
+                petStatusIndicator.style.color = 'var(--accent-color)';
+            } else {
+                petStatusIndicator.style.color = 'var(--success-color)';
+            }
+        }
+
+        // Add a log message
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // Clear all data
+        function clearData() {
+            for (const key in state.sensorData) {
+                state.sensorData[key].history = [];
+                state.sensorData[key].min = null;
+                state.sensorData[key].max = null;
+            }
+
+            logContent.innerHTML = '';
+            logMessage('All data cleared');
+
+            // Reset charts and gauges
+            document.getElementById('heart-rate-value').innerHTML = '-- <span class="sensor-unit">BPM</span>';
+            document.getElementById('heart-rate-min').textContent = '--';
+            document.getElementById('heart-rate-max').textContent = '--';
+            heartRateChart.innerHTML = '';
+
+            document.getElementById('temperature-value').innerHTML = '-- <span class="sensor-unit">°C</span>';
+            document.getElementById('temperature-min').textContent = '--';
+            document.getElementById('temperature-max').textContent = '--';
+            temperatureChart.innerHTML = '';
+
+            document.getElementById('left-ultrasonic-value').innerHTML = '-- <span class="sensor-unit">cm</span>';
+            document.getElementById('left-ultrasonic-min').textContent = '--';
+            document.getElementById('left-ultrasonic-max').textContent = '--';
+            leftUltrasonicGauge.style.transform = 'rotate(0deg)';
+            document.getElementById('left-ultrasonic-gauge-value').textContent = '--';
+
+            document.getElementById('right-ultrasonic-value').innerHTML = '-- <span class="sensor-unit">cm</span>';
+            document.getElementById('right-ultrasonic-min').textContent = '--';
+            document.getElementById('right-ultrasonic-max').textContent = '--';
+            rightUltrasonicGauge.style.transform = 'rotate(0deg)';
+            document.getElementById('right-ultrasonic-gauge-value').textContent = '--';
+
+            // Reset pet status
+            petStatusIndicator.textContent = 'Normal';
+            petStatusMessage.textContent = 'All vitals are within normal ranges';
+            petStatusIndicator.style.color = 'var(--success-color)';
+        }
+
+        // Initialize with welcome message
+        logMessage('Welcome to PetFit Collar Dashboard');
+        logMessage('Click on the logo to upload your own');
+        logMessage('Click "Connect Bluetooth" to start monitoring your pet');
+    </script>
+</body>
+</html>
