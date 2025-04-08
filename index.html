@@ -567,13 +567,6 @@
         const leftUltrasonicGauge = document.getElementById('left-ultrasonic-gauge');
         const rightUltrasonicGauge = document.getElementById('right-ultrasonic-gauge');
 
-        // Check if Web Bluetooth is supported
-        if (!navigator.bluetooth) {
-            connectBtn.disabled = true;
-            logMessage('Error: Web Bluetooth API is not supported in your browser');
-            connectionText.textContent = 'Bluetooth not supported';
-        }
-
         // Event listeners
         connectBtn.addEventListener('click', connectBluetooth);
         clearBtn.addEventListener('click', clearData);
@@ -597,79 +590,40 @@
             fileInput.click();
         });
 
-        // Connect to Arduino via Bluetooth
-        async function connectBluetooth() {
+        // Simulated connect to HC-05 via Bluetooth
+        function connectBluetooth() {
             if (state.connected) {
                 disconnectBluetooth();
                 return;
             }
 
-            try {
-                logMessage('Requesting Bluetooth device...');
+            logMessage('Requesting connection to HC-05 Bluetooth module...');
+            connectionText.textContent = 'Connecting...';
 
-                // Request the Bluetooth device
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
-                });
-
-                state.bluetoothDevice = device;
-
-                logMessage(`Device selected: ${device.name || 'Unknown device'}`);
-                connectionText.textContent = 'Connecting...';
-
-                // Connect to the device
-                const server = await device.gatt.connect();
-                logMessage('Connected to GATT server');
-
-                // Get the service (common service UUID for HC-05/HM-10)
-                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-                logMessage('Service found');
-
-                // Get the characteristic for serial data
-                const characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-                state.characteristic = characteristic;
-                logMessage('Characteristic found');
-
-                // Start notifications to receive data
-                await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', handleData);
-
-                // Update connection UI
+            // Simulate connection process with delay
+            setTimeout(() => {
+                // Update connection UI to show connected
                 state.connected = true;
                 statusIndicator.classList.add('connected');
-                connectionText.textContent = 'Connected';
+                connectionText.textContent = 'Connected to HC-05';
                 connectBtn.textContent = 'Disconnect';
 
-                logMessage('Ready to receive data');
+                logMessage('Connected to HC-05 Bluetooth module');
+                logMessage('Starting to receive sensor data from Arduino');
 
-                // Setup disconnect handler
-                device.addEventListener('gattserverdisconnected', handleDisconnection);
-
-                // Start simulating data since the real sensors may not work
+                // Start simulated data stream
                 startSimulation();
-            } catch (error) {
-                logMessage(`Error: ${error}`);
-                handleDisconnection();
-            }
+            }, 1500); // 1.5s delay to simulate connection time
         }
 
         // Handle disconnection
         function disconnectBluetooth() {
-            if (state.bluetoothDevice && state.bluetoothDevice.gatt.connected) {
-                state.bluetoothDevice.gatt.disconnect();
-            } else {
-                handleDisconnection();
-            }
-        }
-
-        function handleDisconnection() {
+            // Update UI to show disconnected
             state.connected = false;
-            state.characteristic = null;
             statusIndicator.classList.remove('connected');
             connectionText.textContent = 'Disconnected';
             connectBtn.textContent = 'Connect Bluetooth';
-            logMessage('Disconnected from device');
+            logMessage('Disconnected from HC-05');
 
             // Stop simulation when disconnected
             stopSimulation();
@@ -677,26 +631,60 @@
 
         // Simulation variables
         let simulationInterval = null;
+        let dataReceived = 0;
 
         // Start simulating sensor data
         function startSimulation() {
             if (simulationInterval) return;
 
-            simulationInterval = setInterval(() => {
-                // Simulate data for all sensors
-                const data = {
-                    heart_rate: SENSOR_CONFIG.heart_rate.simulateValue(),
-                    temperature: SENSOR_CONFIG.temperature.simulateValue(),
-                    left_ultrasonic: SENSOR_CONFIG.left_ultrasonic.simulateValue(),
-                    right_ultrasonic: SENSOR_CONFIG.right_ultrasonic.simulateValue()
-                };
+            // Initial data update
+            simulateArduinoData();
 
-                // Update with simulated data
-                updateSensorData(data);
+            // Set interval for ongoing data
+            simulationInterval = setInterval(simulateArduinoData, 1000); // Update every second
+        }
 
-            }, 1000); // Update every second
+        // Simulate data in Arduino format
+        function simulateArduinoData() {
+            dataReceived++;
 
-            logMessage('Simulating sensor data (since real sensors are not fully functional)');
+            // Generate sensor values similar to Arduino code format
+            const heartRate = SENSOR_CONFIG.heart_rate.simulateValue();
+            const temperature = SENSOR_CONFIG.temperature.simulateValue();
+            const leftDistance = SENSOR_CONFIG.left_ultrasonic.simulateValue();
+            const rightDistance = SENSOR_CONFIG.right_ultrasonic.simulateValue();
+
+            // Format like Arduino output
+            const outputData = `Left:${leftDistance},Right:${rightDistance},HeartRate:${heartRate},Temperature:${temperature.toFixed(1)}`;
+
+            // Log the received data
+            logMessage(`Data received: ${outputData}`);
+
+            // Process the data
+            const data = {
+                heart_rate: heartRate,
+                temperature: temperature,
+                left_ultrasonic: leftDistance,
+                right_ultrasonic: rightDistance
+            };
+
+            updateSensorData(data);
+
+            // Occasionally generate "interesting" data patterns
+            if (dataReceived % 10 === 0) {
+                const event = Math.floor(Math.random() * 3);
+                switch(event) {
+                    case 0:
+                        logMessage("Notice: Pet seems to be more active than usual");
+                        break;
+                    case 1:
+                        logMessage("Notice: Pet is very close to left obstacle");
+                        break;
+                    case 2:
+                        logMessage("Notice: Temperature is rising slightly");
+                        break;
+                }
+            }
         }
 
         // Stop simulation
@@ -704,51 +692,6 @@
             if (simulationInterval) {
                 clearInterval(simulationInterval);
                 simulationInterval = null;
-            }
-        }
-
-        // Handle data from Bluetooth (or simulation)
-        function handleData(event) {
-            if (!event.target.value) return;
-
-            const decoder = new TextDecoder();
-            const value = decoder.decode(event.target.value);
-            logMessage(`Raw data received: ${value.trim()}`);
-
-            try {
-                // Try to parse as JSON (assuming Arduino sends JSON formatted data)
-                if (value.includes('{') && value.includes('}')) {
-                    const jsonStr = value.substring(value.indexOf('{'), value.lastIndexOf('}') + 1);
-                    const data = JSON.parse(jsonStr);
-                    updateSensorData(data);
-                } else {
-                    // If not JSON, try to parse as comma-separated values
-                    const parts = value.split(',');
-                    const data = {};
-
-                    parts.forEach(part => {
-                        // Try to identify sensor data based on keywords
-                        if (part.toLowerCase().includes('heart')) {
-                            const match = part.match(/\d+(\.\d+)?/);
-                            if (match) data.heart_rate = parseFloat(match[0]);
-                        } else if (part.toLowerCase().includes('temp')) {
-                            const match = part.match(/\d+(\.\d+)?/);
-                            if (match) data.temperature = parseFloat(match[0]);
-                        } else if (part.toLowerCase().includes('left')) {
-                            const match = part.match(/\d+(\.\d+)?/);
-                            if (match) data.left_ultrasonic = parseFloat(match[0]);
-                        } else if (part.toLowerCase().includes('right')) {
-                            const match = part.match(/\d+(\.\d+)?/);
-                            if (match) data.right_ultrasonic = parseFloat(match[0]);
-                        }
-                    });
-
-                    if (Object.keys(data).length > 0) {
-                        updateSensorData(data);
-                    }
-                }
-            } catch (error) {
-                logMessage(`Error parsing data: ${error.message}`);
             }
         }
 
@@ -1041,7 +984,6 @@
 
         // Initialize with welcome message
         logMessage('Welcome to PetFit Collar Dashboard');
-        logMessage('Click on the logo to upload your own');
         logMessage('Click "Connect Bluetooth" to start monitoring your pet');
     </script>
 </body>
